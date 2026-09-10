@@ -1,0 +1,26 @@
+From f4468eff31f993910ce9ba1c8c45376bb88ba148 Mon Sep 17 00:00:00 2001
+From: David Drobner <david@drobner.ca>
+Date: Mon, 17 Aug 2026 16:15:33 +0000
+Subject: [PATCH 1/2] Take i2c switches out of reset in board_late_init
+
+---
+ board/xilinx/zynqmp/zynqmp.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/board/xilinx/zynqmp/zynqmp.c b/board/xilinx/zynqmp/zynqmp.c
+index d07979f0dd3..1dfe781e953 100644
+--- a/board/xilinx/zynqmp/zynqmp.c
++++ b/board/xilinx/zynqmp/zynqmp.c
+@@ -522,6 +522,9 @@ int board_late_init(void)
+ {
+ 	int ret, multiboot;
+ 
++	writel(0x00000201, 0x80020000);
++	printf("Board Init: Poked 0x00000201 -> 0x80020000\n");
++
+ #if defined(CONFIG_USB_ETHER) && !defined(CONFIG_USB_GADGET_DOWNLOAD)
+ 	usb_ether_init();
+ #endif
+-- 
+2.44.4
+

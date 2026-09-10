@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import time
+
+sleep = 1
+module = '5EV'
+if module == '2EG':
+    base_addr = '0xa003'
+else:
+    base_addr = '0x8002'
+
+logfile = open(sys.argv[1], 'w')
+
+os.system('poke ' + base_addr + '0000 0x00000201')
+print ('Taking I2C switches out of reset')
+time.sleep(sleep)
+
+os.system('i2cset -y -r 0 0x70 0x08')
+print ('Selecting I2C switch for local sensor read')
+time.sleep(sleep)
+
+'''
+Converts one of 16 hex char to raw bytes for UART.
+Note: bytes are send in reverse order on UART line,
+but I2C read is reversed also.
+'''
+def char_to_raw(data, length):
+    output = ""
+    for x in range (0, length):
+        if x == 0 or x == 2:
+            output += r"\x" + data[x]
+        if x == 1 or x == 3:
+            output += data[x]
+    return output
+
+def read_temp (addr):
+    try:
+        i2c_raw = os.popen('i2cget -y 0 ' + addr + ' 0x00 w').read()
+        raw_word = char_to_raw(i2c_raw[2:6], 4)
+        # i2cget gives byte-swapped output
+        i2c_dec =((int((i2c_raw)[4:6],16) << 8) + int((i2c_raw)[2:4],16))
+        #Note that two's comp can give neg temp - should never see on PTC
+        temp = i2c_dec * 0.0078125 #conversion to degC on TMP117
+        string = 'Temp sensor addr ' + str(addr) + ' reads raw value: ' + i2c_raw + ' which is temp: ' + format(temp, '0.1f') + ' C\n'
+        print (string)
+        logfile.write(string)
+    except Exception as e:
+        string = 'Sensor ' + str(addr) + ' not readable\n'
+        print (string)
+        logfile.write(string)
+        raw_word = char_to_raw('adde', 4)
+    return raw_word
+
+def read_volt (addr):
+    try:
+        i2c_raw = os.popen('i2cget -y 0 ' + addr + ' 0x1e w').read()
+        raw_word = char_to_raw(i2c_raw[2:6], 4)
+        # Right shift bc first 4 bits in reg are don't-care
+        i2c_dec =((int((i2c_raw)[4:6],16) << 8) + int((i2c_raw)[2:4],16)) >> 4
+        volts = i2c_dec * 0.025 # ADC conversion for LTC2945
+        string = 'Voltage sensor addr ' + str(addr) + ' reads raw value: ' + i2c_raw + ' which is voltage: ' + format(volts, '0.1f') + ' V\n'
+        print (string)
+        logfile.write(string)
+    except Exception as e:
+        string = 'Sensor ' + str(addr) + ' not readable\n'
+        print (string)
+        logfile.write(string)
+        raw_word = char_to_raw('adde', 4)
+    return raw_word
+
+def read_curr (addr, resistor):
+    try:
+        i2c_raw = os.popen('i2cget -y 0 ' + addr + ' 0x14 w').read()
+        raw_word = char_to_raw(i2c_raw[2:6], 4)
+        # Right shift bc first 4 bits in reg are don't-care
+        i2c_dec =((int((i2c_raw)[4:6],16) << 8) + int((i2c_raw)[2:4],16)) >> 4
+        curr = i2c_dec * 0.000025 / resistor # ADC conversion for LTC2945 / resistor value
+        string = 'Voltage sensor addr ' + str(addr) + ' reads raw value: ' + i2c_raw + ' which is current: ' + format(curr, '0.2f') + ' A\n'
+        print (string)
+        logfile.write(string)
+    except Exception as e:
+        string = 'Sensor ' + str(addr) + ' not readable\n'
+        print (string)
+        logfile.write(string)
+        raw_word = char_to_raw('adde', 4)
+    return raw_word
+
+while(1):
+    date = os.popen('date').read()
+    logfile.write(date)
+    for addr in ['0x48', '0x49', '0x4a', '0x4b']:
+        word0 = read_temp(addr)
+    for addr in ['0x67']:
+        word1 = read_curr(addr, 0.005)
+    for addr in ['0x68', '0x69', '0x6a', '0x6b', '0x6c', '0x6d']:
+        word2 = read_curr(addr, 0.005)
+    for addr in ['0x6e']:
+        word3 = read_curr(addr, 0.0025) #48V sensor has special value
+    data = word1 + word3 + r"\xfe\xca" 
+    os.system('echo -n -e "' + data + '" > /dev/ttyPS1')
+    # switch I2C bus for additional temp sensors
+    os.system('i2cset -y -r 0 0x70 0x04')
+    print ('Switching to alternate I2C bus')
+    for addr in ['0x48', '0x49', '0x4a', '0x4b']:
+        word4 = read_temp(addr)
+    for addr in ['0x6e', '0x6f']:
+        word5 = read_curr(addr, 0.020) # 3.3/2.5V sensors have special value
+    os.system('i2cset -y -r 0 0x70 0x08')
+    print ('switching back to default I2C bus')
+    time.sleep(sleep)

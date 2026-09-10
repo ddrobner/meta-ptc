@@ -1,0 +1,75 @@
+From e03f0700f414a54a5e6eafbe8b5c95930408d622 Mon Sep 17 00:00:00 2001
+From: David Drobner <david@drobner.ca>
+Date: Tue, 18 Aug 2026 16:03:34 +0000
+Subject: [PATCH] Attempt to fix PCS lock in macb_main
+
+---
+ drivers/net/ethernet/cadence/macb_main.c | 45 +++++++++++++++++++++++-
+ 1 file changed, 44 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/cadence/macb_main.c b/drivers/net/ethernet/cadence/macb_main.c
+index 3f009c69ecdb..3e5764fd1be3 100644
+--- a/drivers/net/ethernet/cadence/macb_main.c
++++ b/drivers/net/ethernet/cadence/macb_main.c
+@@ -783,7 +783,7 @@ static void macb_mac_link_up(struct phylink_config *config,
+ 	struct macb_queue *queue;
+ 	unsigned long flags;
+ 	unsigned int q;
+-	u32 ctrl;
++	u32 ctrl, status;
+ 
+ 	spin_lock_irqsave(&bp->lock, flags);
+ 
+@@ -835,6 +835,49 @@ static void macb_mac_link_up(struct phylink_config *config,
+ 	macb_writel(bp, NCR, ctrl | MACB_BIT(RE) | MACB_BIT(TE));
+ 
+ 	netif_tx_wake_all_queues(ndev);
++
++	/* --- Resync GEM PCS for Copper RJ45 SFPs in Fixed-Link --- */
++	if (interface == PHY_INTERFACE_MODE_SGMII ||
++	    phy_interface_mode_is_8023z(interface)) {
++		u32 ctrl, status;
++		int timeout = 100;
++
++		netdev_info(bp->dev, "SGMII fixed-link detected: Triggering forced PCS resync\n");
++
++		/* Read current control register */
++		ctrl = gem_readl(bp, PCSCNTRL);
++
++		/* 
++		 * 1. Clear Bit 12 (Disable Clause 37 Auto-Neg)
++		 * 2. Set Bit 8 (Full Duplex) and Bit 6 (1000Mbps Speed)
++		 * 3. Set Bit 15 (PCS Soft Reset)
++		 */
++		ctrl &= ~BIT(12);
++		ctrl |= BIT(8) | BIT(6) | BIT(15);
++		gem_writel(bp, PCSCNTRL, ctrl);
++
++		udelay(100);
++
++		/* Release PCS Soft Reset (Clear Bit 15) */
++		ctrl &= ~BIT(15);
++		gem_writel(bp, PCSCNTRL, ctrl);
++
++		/* Wait up to 10ms for PCS Link Lock (PCSSTS Bit 2) */
++		do {
++			status = gem_readl(bp, PCSSTS);
++			if (status & BIT(2))
++				break;
++			udelay(100);
++		} while (--timeout);
++
++		if (status & BIT(2)) {
++			netdev_info(bp->dev, "PCS Link LOCKED -> PCSCNTRL: 0x%08x, PCSSTS: 0x%08x\n",
++				    gem_readl(bp, PCSCNTRL), status);
++		} else {
++			netdev_warn(bp->dev, "PCS Link LOCK TIMEOUT -> PCSCNTRL: 0x%08x, PCSSTS: 0x%08x\n",
++				    gem_readl(bp, PCSCNTRL), status);
++		}
++	}
+ }
+ 
+ static struct phylink_pcs *macb_mac_select_pcs(struct phylink_config *config,
+-- 
+2.44.4
+

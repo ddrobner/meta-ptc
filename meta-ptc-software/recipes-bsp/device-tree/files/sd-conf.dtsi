@@ -1,0 +1,14 @@
+/ {
+        aliases {
+                mmc0 = &sdhci1; /* SD Card */
+                mmc1 = &sdhci0; /* eMMC */
+        };
+};
+
+
+&sdhci1 {
+        status = "okay";
+        no-1-8-v;
+        xlnx,mio_bank = <1>;
+        wp-inverted;
+};

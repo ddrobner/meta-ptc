@@ -1,0 +1,8 @@
+bootmenu_delay=10
+bootmenu_default=0
+bootmenu_0=Network Boot=run boot_network
+bootmenu_1=SD Boot=run boot_sd
+boot_network=setenv autoload no; dhcp; setenv netbootip ${serverip}; if test \"x\$httpip\" != \"x\"; then echo \"Using HTTP server IP loaded from environment for boot.scr\"; setenv netbootip ${httpip}; fi; wget ${scriptaddr} ${netbootip}:/ptc/boot.scr; source ${scriptaddr}
+boot_sd=echo Booting from SD card...; if load mmc 0:1 ${scriptaddr} boot_sd.scr; then source ${scriptaddr}; else echo SD Boot failed! Entering console...; shell; fi
+bootcmd=bootmenu
+ethprime=eth1

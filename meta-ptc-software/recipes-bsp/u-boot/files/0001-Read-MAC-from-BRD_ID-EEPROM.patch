@@ -1,0 +1,86 @@
+From fd03878672ca81bac6a79f4887188357bf9838bb Mon Sep 17 00:00:00 2001
+From: David Drobner <david@drobner.ca>
+Date: Mon, 17 Aug 2026 21:29:02 +0000
+Subject: [PATCH] Read MAC from BRD_ID EEPROM
+
+---
+ board/xilinx/zynqmp/zynqmp.c | 53 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 53 insertions(+)
+
+diff --git a/board/xilinx/zynqmp/zynqmp.c b/board/xilinx/zynqmp/zynqmp.c
+index 1dfe781e953..c11074fead8 100644
+--- a/board/xilinx/zynqmp/zynqmp.c
++++ b/board/xilinx/zynqmp/zynqmp.c
+@@ -40,6 +40,8 @@
+ #include <linux/bitops.h>
+ #include <linux/delay.h>
+ #include <linux/sizes.h>
++#include <i2c.h>
++#include <dm.h>
+ #include "../common/board.h"
+ 
+ #include "pm_cfg_obj.h"
+@@ -522,9 +524,60 @@ int board_late_init(void)
+ {
+ 	int ret, multiboot;
+ 
++	u8 mac[6];
++	char mac_str[18];
++	struct udevice *mux_dev;
++	struct udevice *ch3_bus;
++	struct udevice *eeprom_dev;
++
++
+ 	writel(0x00000201, 0x80020000);
+ 	printf("Board Init: Poked 0x00000201 -> 0x80020000\n");
+ 
++	if (!env_get("ethaddr") || !env_get("eth1addr")) {
++
++		/* Step A: Get Mux chip at 0x70 on Bus 1 */
++		ret = i2c_get_chip_for_busnum(1, 0x70, 0, &mux_dev);
++		if (ret == 0) {
++			/* Force probe the Mux */
++			device_probe(mux_dev);
++
++			/* Step B: Get child 3 (Channel 3 / i2c@3) directly from Mux */
++			ret = device_get_child(mux_dev, 3, &ch3_bus);
++			if (ret == 0) {
++				device_probe(ch3_bus);
++
++				/* Step C: Get EEPROM at 0x50 on Channel 3 bus */
++				ret = i2c_get_chip(ch3_bus, 0x50, 1, &eeprom_dev);
++				if (ret == 0) {
++					/* Step D: Read 6 bytes starting from offset 0xFA */
++					ret = dm_i2c_read(eeprom_dev, 0xFA, mac, 6);
++					if (ret == 0) {
++						if (!((mac[0] == 0x00 && mac[1] == 0x00 && mac[2] == 0x00) ||
++						      (mac[0] == 0xFF && mac[1] == 0xFF && mac[2] == 0xFF))) {
++							snprintf(mac_str, sizeof(mac_str), "%02x:%02x:%02x:%02x:%02x:%02x",
++								 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
++							printf("EEPROM MAC Read Success! Setting MAC: %s\n", mac_str);
++							env_set("ethaddr", mac_str);
++							env_set("eth1addr", mac_str);
++						} else {
++							printf("Board Init Error: EEPROM returned invalid MAC bytes\n");
++						}
++					} else {
++						printf("Board Init Error: Failed to read offset 0xFA from EEPROM (err=%d)\n", ret);
++					}
++				} else {
++					printf("Board Init Error: Could not find EEPROM 0x50 on Channel 3 (err=%d)\n", ret);
++				}
++			} else {
++				printf("Board Init Error: Could not get Channel 3 bus from Mux (err=%d)\n", ret);
++			}
++		} else {
++			printf("Board Init Error: Could not find Mux 0x70 on bus 1 (err=%d)\n", ret);
++		}
++	}
++
++
+ #if defined(CONFIG_USB_ETHER) && !defined(CONFIG_USB_GADGET_DOWNLOAD)
+ 	usb_ether_init();
+ #endif
+-- 
+2.44.4
+

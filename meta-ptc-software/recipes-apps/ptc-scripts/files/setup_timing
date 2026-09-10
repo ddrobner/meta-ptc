@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import time
+
+module = '5EV'
+if module == '2EG':
+    base_addr = '0xa003'
+else:
+    base_addr = '0x8002'
+
+os.system('poke ' + base_addr + '0004 0x00010400')
+print ('Selecting PTC SFP as timing source, resetting endpoint')
+time.sleep(1)
+
+os.system('poke ' + base_addr + '0004 0x00010000')
+print ('Endpoint out of reset. Endpoint state is: ')
+time.sleep(1)
+os.system('peek ' + base_addr + '0104')
+time.sleep(1)
+
+os.system('ifconfig eth1 192.168.200.12 up')
+time.sleep(1)
+os.system('poke 0xff0c0004 0x092e2c4a')
+print ('Bringing up eth1. GbE link state is: ')
+time.sleep(1)
+os.system('peek 0xff0c0200')
