@@ -3,10 +3,9 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 SRC_URI:append = " file://platform-top.h file://bsp.cfg"
 SRC_URI += "file://u-boot-merged.cfg \
             file://0001-Take-i2c-switches-out-of-reset-in-board_late_init.patch \
-            file://0001-Read-MAC-from-BRD_ID-EEPROM.patch \
+            file://0002-Read-MAC-address-from-DIP-switches-in-late-init.patch \
             file://menu_env.txt \
             "
-
 
 DEPENDS += " u-boot-sd-scr"
 DEPENDS += " u-boot-xlnx-scr" 

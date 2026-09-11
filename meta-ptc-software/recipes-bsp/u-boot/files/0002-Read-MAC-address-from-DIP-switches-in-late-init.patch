@@ -1,0 +1,51 @@
+From d9a07c87d87ef7a4ef7c689b927260dd07d2d3de Mon Sep 17 00:00:00 2001
+From: David Drobner <david@drobner.ca>
+Date: Fri, 11 Sep 2026 13:51:55 -0400
+Subject: [PATCH] Read MAC address from DIP switches in board_late_init
+
+---
+ board/xilinx/zynqmp/zynqmp.c | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/board/xilinx/zynqmp/zynqmp.c b/board/xilinx/zynqmp/zynqmp.c
+index 1dfe781e953..c112c90fb3f 100644
+--- a/board/xilinx/zynqmp/zynqmp.c
++++ b/board/xilinx/zynqmp/zynqmp.c
+@@ -521,6 +521,37 @@ static int boot_targets_setup(void)
+ int board_late_init(void)
+ {
+ 	int ret, multiboot;
++	u32 reg_val;
++	u8 raw_byte;
++	u8 inv_byte;
++	u8 dip_val = 0;
++	char mac_str[18];
++
++	/* Enable level translator */
++	writel(0x00800201, 0x80020000);
++	printf("Board Init: Poked 0x00800201 -> 0x80020000 (Level Translator Enabled)\n");
++
++	udelay(100);
++	
++	/* Read dip switches */
++	reg_val = readl(0x8002010C);
++	raw_byte = (reg_val >> 24) & 0xFF;
++
++	inv_byte = ~raw_byte & 0xFF;
++
++	/* Decode LSB-first switch layout */
++	int i;
++	for (i=0; i<8; i++) {
++		u8 bit = (inv_byte >> i) & 1;
++		dip_val |= (bit << (7 - i));
++	}
++	printf("Board Init: DIP Switch RAW=0x%02x, Decoded=0x%02x\n", raw_byte, dip_val);
++
++	/* Set MAC address */
++	snprintf(mac_str, sizeof(mac_str), "AA:BB:CC:DD:11:%02x", dip_val);
++	printf("Board Init: Setting eth1addr to: %s\n", mac_str);
++	env_set("eth1addr", mac_str);
++
+ 
+ 	writel(0x00000201, 0x80020000);
+ 	printf("Board Init: Poked 0x00000201 -> 0x80020000\n");

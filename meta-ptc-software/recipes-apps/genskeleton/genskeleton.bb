@@ -14,6 +14,8 @@ S = "${WORKDIR}"
 
 do_install() {
 		 install -d -m 0777 ${D}/mnt/persist
+		 install -d -m 0777 ${D}/mnt/bootsd
 }
 
 FILES:${PN} += "/mnt/persist"
+FILES:${PN} += "/mnt/bootsd"

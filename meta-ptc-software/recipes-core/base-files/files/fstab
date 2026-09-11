@@ -7,5 +7,6 @@ proc                 /proc                proc       defaults              0  0
 devpts               /dev/pts             devpts     mode=0620,ptmxmode=0666,gid=5      0  0
 tmpfs                /run                 tmpfs      mode=0755,nodev,nosuid,strictatime 0  0
 tmpfs                /var/volatile        tmpfs      defaults              0  0
-# /dev/mmcblk0p1       /mnt/persist         auto       defaults,noatime,nofail,x-systemd.device-timeout=5s 0  2
-/dev/mmcblk0p1       /mnt/persist         auto       noatime,noauto 0  2
+LABEL=BOOT           /mnt/bootsd          auto defaults,noatime,nofail,x-systemd.device-timeout=5s 0  2
+LABEL=persist        /mnt/persist         auto defaults,noatime,nofail,x-systemd.device-timeout=5s 0  2
+# /dev/mmcblk0p1       /mnt/persist         auto       noatime,noauto 0  2

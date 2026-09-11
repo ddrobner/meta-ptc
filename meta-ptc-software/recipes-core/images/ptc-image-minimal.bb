@@ -13,7 +13,7 @@ DEPLOY_DIR_IMAGE = "${DEPLOY_DIR}/images/${MACHINE}/minimal"
 BASE_DEPLOY_DIR_IMAGE = "${DEPLOY_DIR}/images/${MACHINE}"
 
 # Stripping rules
-IMAGE_FEATURES = "read-only-rootfs ssh-server-dropbear empty-root-password allow-empty-password"
+IMAGE_FEATURES = "read-only-rootfs ssh-server-dropbear empty-root-password allow-empty-password allow-root-login debug-tweaks"
 IMAGE_LINGUAS = ""
 USE_NLS = "no"
 NO_RECOMMENDATIONS = "1"

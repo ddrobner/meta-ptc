@@ -11,6 +11,7 @@ SRC_URI = " \
     file://setup_timing \
     file://power_on_wib \
     file://ecat_test1b \
+    file://read_dip_switches \
 "
 
 S = "${WORKDIR}"
@@ -23,6 +24,7 @@ do_install() {
     install -m 0755 ${S}/setup_timing ${D}${bindir}/
     install -m 0755 ${S}/power_on_wib ${D}${bindir}/
     install -m 0755 ${S}/ecat_test1b ${D}${bindir}/
+    install -m 0755 ${S}/read_dip_switches ${D}${bindir}/
 }
 
 RDEPENDS:${PN} = "python3"
