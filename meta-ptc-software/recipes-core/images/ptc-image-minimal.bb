@@ -2,11 +2,6 @@ SUMMARY = "PTC Production Minimal Image"
 require recipes-core/images/core-image-minimal.bb
 DEPENDS += "u-boot-tools-native virtual/kernel"
 
-# =========================================================================
-# 1. REDIRECT OUTPUT DIRECTORY
-# =========================================================================
-# We point this specific recipe's deploy directory to a subdirectory.
-# Change "minimal" to "full" in your full-image recipe.
 DEPLOY_DIR_IMAGE = "${DEPLOY_DIR}/images/${MACHINE}/minimal"
 
 # Keep a reference to the default directory to fetch the shared Kernel/DTB

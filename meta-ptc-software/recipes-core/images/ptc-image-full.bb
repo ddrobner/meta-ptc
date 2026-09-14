@@ -6,25 +6,23 @@ inherit core-image
 KERNEL_CLASSES += "kernel-fitimage"
 KERNEL_IMAGETYPE = "fitImage"
 
+DEPLOY_DIR_IMAGE = "${DEPLOY_DIR}/images/${MACHINE}/full"
+BASE_DEPLOY_DIR_IMAGE = "${DEPLOY_DIR}/images/${MACHINE}"
+
 FITIMAGE_PACK_RAMDISK = "1"
-INITRAMFS_IMAGE = "ptc-image-minimal"
-INITRAMFS_IMAGE_NAME = "ptc-image-minimal-zynqmp-ptc.rootfs"
+INITRAMFS_IMAGE = "ptc-image-full"
+INITRAMFS_IMAGE_NAME = "ptc-image-full-zynqmp-ptc.rootfs"
 CONFIG_BLK_DEV_INITRD = "n"
 IMAGE_ROOTFS_EXTRA_SPACE = "0"
 IMAGE_OVERHEAD_FACTOR = "1.0"
 
-# -------------------------------------------------------------
-# Core & Package Groups
-# -------------------------------------------------------------
+IMAGE_INSTALL:remove = "gstreamer-vcu-examples libvcu-omxil"
+
 IMAGE_INSTALL:append = " \
     packagegroup-core-boot \
     packagegroup-core-buildessential \
-    packagegroup-core-buildessential-dev \
 "
 
-# -------------------------------------------------------------
-# AMD / Xilinx Hardware & FPGA Tools
-# -------------------------------------------------------------
 IMAGE_INSTALL:append = " \
     fpga-manager-script \
     libdfx \
@@ -34,9 +32,6 @@ IMAGE_INSTALL:append = " \
     libubootenv-bin \
 "
 
-# -------------------------------------------------------------
-# Networking & Connectivity Tools
-# -------------------------------------------------------------
 IMAGE_INSTALL:append = " \
     bridge-utils \
     can-utils \
@@ -50,12 +45,8 @@ IMAGE_INSTALL:append = " \
     tcpdump \
 "
 
-# -------------------------------------------------------------
-# System Utilities & Storage Tools
-# -------------------------------------------------------------
 IMAGE_INSTALL:append = " \
     acl \
-    acl-dev \
     bzip2 \
     dbus \
     dbus-dev \
@@ -80,12 +71,10 @@ IMAGE_INSTALL:append = " \
     zip \
 "
 
-# -------------------------------------------------------------
-# Custom Migrated User Applications (from meta-user)
-# -------------------------------------------------------------
 IMAGE_INSTALL:append = " \
     genskeleton \
     openocd \
-    regtest \
     sfp-init \
+    peekpoke \
+    ptc-scripts \
 "
