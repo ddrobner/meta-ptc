@@ -27,11 +27,11 @@ IMAGE_OVERHEAD_FACTOR = "1.0"
 # Add only runtime dependencies
 IMAGE_INSTALL:append = " \
     mtd-utils \
-    sfp-init \
     genskeleton \
     devmem2 \
     ptc-scripts \
     peekpoke \
+    sfp-iface-config \
 "
 
 # Direct systemd to act as /init

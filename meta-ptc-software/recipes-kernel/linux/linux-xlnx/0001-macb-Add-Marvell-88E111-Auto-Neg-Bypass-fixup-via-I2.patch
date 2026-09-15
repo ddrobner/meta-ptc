@@ -1,0 +1,126 @@
+From 188a382b298207082a29d3b00f0975e96837f5bf Mon Sep 17 00:00:00 2001
+From: OpenEmbedded <oe.patch@oe>
+Date: Tue, 15 Sep 2026 15:56:11 -0400
+Subject: [PATCH] macb: Add Marvell 88E111 Auto-Neg Bypass fixup via I2C
+
+---
+ drivers/net/ethernet/cadence/Kconfig     |  8 +++
+ drivers/net/ethernet/cadence/macb_main.c | 71 ++++++++++++++++++++++++
+ 2 files changed, 79 insertions(+)
+
+diff --git a/drivers/net/ethernet/cadence/Kconfig b/drivers/net/ethernet/cadence/Kconfig
+index 5b2a461dfd28..d3482e106dd2 100644
+--- a/drivers/net/ethernet/cadence/Kconfig
++++ b/drivers/net/ethernet/cadence/Kconfig
+@@ -51,4 +51,12 @@ config MACB_PCI
+ 	  To compile this driver as a module, choose M here: the module
+ 	  will be called macb_pci.
+ 
++config MACB_SFP_I2C_BUS
++	int "I2C bus number for SFP Marvell 88E1111 PHY fixup"
++	depends on MACB && I2C
++	help
++		Specifies the I2C adapter bus number used to communicate with 
++		Marvell 88E1111 PHYs on copper SFP modules (e.g., 3 for i2c-3).
++		Set to -1 to disable the fixup.
++
+ endif # NET_VENDOR_CADENCE
+diff --git a/drivers/net/ethernet/cadence/macb_main.c b/drivers/net/ethernet/cadence/macb_main.c
+index 68ca6713a09a..5e8bf0605e40 100644
+--- a/drivers/net/ethernet/cadence/macb_main.c
++++ b/drivers/net/ethernet/cadence/macb_main.c
+@@ -15,6 +15,7 @@
+ #include <linux/types.h>
+ #include <linux/circ_buf.h>
+ #include <linux/slab.h>
++#include <linux/i2c.h>
+ #include <linux/init.h>
+ #include <linux/io.h>
+ #include <linux/gpio.h>
+@@ -3033,6 +3034,74 @@ static void macb_set_rx_mode(struct net_device *dev)
+ 	macb_writel(bp, NCFGR, cfg);
+ }
+ 
++#define MARVELL_PHY_I2C_ADDR 0x56
++
++static void macb_marvell_88e1111_sgmii_fixup(struct macb *bp)
++{
++	#if IS_ENABLED(CONFIG_I2C)
++	struct i2c_adapter *adapter;
++	struct i2c_client client;
++	s32 phy_id1, phy_id2, reg26;
++	int bus_num = CONFIG_MACB_SFP_I2C_BUS;
++
++	if (bus_num < 0)
++		return; /* Feature disabled in Kconfig */
++
++	adapter = i2c_get_adapter(bus_num);
++	if (!adapter)
++		return; /* Bus not present or ready */
++
++	/* Temporary i2c client */
++	memset(&client, 0, sizeof(client));
++	client.adapter = adapter;
++	client.addr = MARVELL_PHY_I2C_ADDR;
++
++	/* 
++	 * Read PHY ID 1 (Reg 2) at address 0x56.
++	 * If address 0x56 NACKs (e.g., Optical SFP or empty cage),
++	 * i2c_smbus_read_word_data returns a negative error code.
++	 */
++	phy_id1 = i2c_smbus_read_word_data(&client, 2);
++	if (phy_id1 < 0)
++		goto out_put; /* NACK / No PHY present at 0x56 */
++
++	phy_id2 = i2c_smbus_read_word_data(&client, 3);
++	if (phy_id2 < 0)
++		goto out_put;
++
++	/* Swap bytes: SMBus returns Low-Byte first, PHY registers are Big-Endian */
++	phy_id1 = swab16((u16)phy_id1);
++	phy_id2 = swab16((u16)phy_id2);
++
++	/* Verify Marvell OUI (0x0141) and 88E1111 Model ID (0x0CC0) */
++	if (phy_id1 != 0x0141 || (phy_id2 & 0xfff0) != 0x0cc0)
++		goto out_put; /* Non-Marvell or different PHY model */
++
++	netdev_info(bp->dev,
++		    "Marvell 88E1111 PHY detected on I2C bus %d. Applying SGMII Auto-Neg Bypass fix...\n",
++		    bus_num);
++
++	/* Switch to Page 1 (SGMII / MAC Specific Registers) */
++	i2c_smbus_write_word_data(&client, 22, swab16(1));
++
++	/* Enable SGMII Auto-Negotiation Bypass (Page 1, Reg 26, Bit 6) */
++	reg26 = i2c_smbus_read_word_data(&client, 26);
++	if (reg26 >= 0) {
++		u16 val = swab16((u16)reg26) | (1 << 6);
++		i2c_smbus_write_word_data(&client, 26, swab16(val));
++	}
++
++	/* Soft Reset Page 1 AN (Bit 15 = Soft Reset, Bit 12 = AN Enable, Bit 9 = Restart AN) */
++	i2c_smbus_write_word_data(&client, 0, swab16(0x9140));
++
++	/* Switch back to Page 0 (Copper Registers) */
++	i2c_smbus_write_word_data(&client, 22, swab16(0));
++
++out_put:
++	i2c_put_adapter(adapter);
++	#endif
++}
++
+ static int macb_open(struct net_device *dev)
+ {
+ 	size_t bufsz = dev->mtu + ETH_HLEN + ETH_FCS_LEN + NET_IP_ALIGN;
+@@ -3068,6 +3137,8 @@ static int macb_open(struct net_device *dev)
+ 	if (err)
+ 		goto reset_hw;
+ 
++	macb_marvell_88e1111_sgmii_fixup(bp);
++
+ 	err = macb_phylink_connect(bp);
+ 	if (err)
+ 		goto phy_off;
+-- 
+2.47.3
+
