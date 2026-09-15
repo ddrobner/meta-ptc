@@ -1,8 +1,20 @@
+# Bootmenu settings
 bootmenu_delay=10
 bootmenu_default=0
+
+# Bootmenu entries
 bootmenu_0=Network Boot=run boot_network
 bootmenu_1=SD Boot=run boot_sd
-boot_network=setenv autoload no; dhcp; setenv netbootip ${serverip}; if test \"x\$httpip\" != \"x\"; then echo \"Using HTTP server IP loaded from environment for boot.scr\"; setenv netbootip ${httpip}; fi; wget ${scriptaddr} ${netbootip}:/ptc/boot.scr; source ${scriptaddr}
+
+# What each menu entry does
+boot_network=setenv autoload no; dhcp; setenv netbootip ${serverip}; if test -n "${httpip}"; then echo Using HTTP IP loaded from environment: ${httpip}; setenv netbootip ${httpip}; fi; if wget ${scriptaddr} ${netbootip}:/ptc/get_menu.txt; then env import -t ${scriptaddr} ${filesize}; bootmenu; else echo Network menu fetch failed. Falling back to SD Boot...; run boot_sd; fi
 boot_sd=echo Booting from SD card...; if load mmc 0:1 ${scriptaddr} boot_sd.scr; then source ${scriptaddr}; else echo SD Boot failed! Entering console...; shell; fi
+
+# Default bootcmd
 bootcmd=bootmenu
+
+# Ensure we use SFP
 ethprime=eth1
+
+# Command to boot the appropriate script in the directory
+do_net_boot=echo Fetching boot script for ${net_img_dir}...; if wget ${scriptaddr} ${netbootip}:/ptc/${net_img_dir}/boot.scr; then source ${scriptaddr}; else echo ERROR: Failed to fetch boot.scr for ${net_img_dir}; fi

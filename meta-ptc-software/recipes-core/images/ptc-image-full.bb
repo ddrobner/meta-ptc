@@ -9,6 +9,8 @@ KERNEL_IMAGETYPE = "fitImage"
 DEPLOY_DIR_IMAGE = "${DEPLOY_DIR}/images/${MACHINE}/full"
 BASE_DEPLOY_DIR_IMAGE = "${DEPLOY_DIR}/images/${MACHINE}"
 
+IMAGE_FEATURES = "read-only-rootfs empty-root-password allow-empty-password allow-root-login debug-tweaks"
+
 FITIMAGE_PACK_RAMDISK = "1"
 INITRAMFS_IMAGE = "ptc-image-full"
 INITRAMFS_IMAGE_NAME = "ptc-image-full-zynqmp-ptc.rootfs"

@@ -18,7 +18,7 @@ setenv bootargs "console=ttyPS0,115200 clk_ignore_unused earlycon"
 
 # Loop until wget succeeds
 echo "Fetching image.ub over HTTP..."
-until wget 0x40000000 ${netbootip}:/ptc/image.ub; do
+until wget 0x40000000 ${netbootip}:/ptc/${net_img_dir}/image.ub; do
     echo ">>> wget timed out or failed! Retrying in 1s... <<<"
     sleep 1
 done
