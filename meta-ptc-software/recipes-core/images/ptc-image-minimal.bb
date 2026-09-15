@@ -42,9 +42,6 @@ link_systemd_init() {
 
 IMAGE_POSTPROCESS_COMMAND += "build_fitimage_ub; "
 
-# =========================================================================
-# 2. UPDATE FITIMAGE TASK TO USE DECOUPLED PATHS
-# =========================================================================
 build_fitimage_ub() {
     # Check inputs using BASE_DEPLOY_DIR_IMAGE
     if [ ! -f "${BASE_DEPLOY_DIR_IMAGE}/Image" ] || [ ! -f "${BASE_DEPLOY_DIR_IMAGE}/system.dtb" ]; then
