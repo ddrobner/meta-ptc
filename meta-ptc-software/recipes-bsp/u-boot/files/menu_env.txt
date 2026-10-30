@@ -18,3 +18,6 @@ ethprime=eth1
 
 # Command to boot the appropriate script in the directory
 do_net_boot=echo Fetching boot script for ${net_img_dir}...; if wget ${scriptaddr} ${netbootip}:/ptc/${net_img_dir}/boot.scr; then source ${scriptaddr}; else echo ERROR: Failed to fetch boot.scr for ${net_img_dir}; fi
+
+# Set server IP address
+# httpip = <PLACEHOLDER>
