@@ -30,7 +30,7 @@ IMAGE_INSTALL:append = " \
     udev-extraconf \
     u-boot-tools \
     libubootenv-bin \
-"
+    "
 
 IMAGE_INSTALL:append = " \
     bridge-utils \
@@ -74,9 +74,10 @@ IMAGE_INSTALL:append = " \
 IMAGE_INSTALL:append = " \
     genskeleton \
     openocd \
-    sfp-init \
     peekpoke \
     ptc-scripts \
+    overlayfs-mounts \
+    overlay-persist-fallback \
 "
 
 IMAGE_POSTPROCESS_COMMAND += "build_fitimage_ub; "

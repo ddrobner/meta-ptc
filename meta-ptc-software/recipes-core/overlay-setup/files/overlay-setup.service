@@ -1,0 +1,13 @@
+[Unit]
+Description=Prepare OverlayFS directory structure on /mnt/persist
+Requires=mnt-persist.mount
+After=mnt-persist.mount
+Before=etc.mount home.mount root.mount
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'mkdir -p /mnt/persist/etc-upper /mnt/persist/etc-work /mnt/persist/home-upper /mnt/persist/home-work /mnt/persist/root-upper /mnt/persist/root-work'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=local-fs.target

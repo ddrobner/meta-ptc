@@ -1,0 +1,13 @@
+[Unit]
+Description=Ensure /mnt/persist is mounted (SD card or tmpfs fallback)
+DefaultDependencies=no
+After=mnt-persist.mount
+ConditionPathIsMountPoint=!/mnt/persist
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'mountpoint -q /mnt/persist || mount -t tmpfs -o size=256M tmpfs /mnt/persist'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=local-fs.target
