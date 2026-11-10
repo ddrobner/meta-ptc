@@ -43,6 +43,7 @@ IMAGE_INSTALL:append = " \
     openssh-sftp-server \
     rsync \
     tcpdump \
+    bash \
 "
 
 IMAGE_INSTALL:append = " \

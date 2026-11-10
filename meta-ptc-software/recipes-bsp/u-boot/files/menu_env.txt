@@ -21,3 +21,4 @@ do_net_boot=echo Fetching boot script for ${net_img_dir}...; if wget ${scriptadd
 
 # Set server IP address
 # httpip = <PLACEHOLDER>
+httpip=192.168.0.14
